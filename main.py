@@ -1,6 +1,6 @@
 #coding:utf-8
 
-import requests,os,re,time
+import requests,os,re,time,pprint
 from docopt import docopt
 from prettytable import PrettyTable
 
@@ -37,9 +37,18 @@ class search(object):
         data=requests.get(self.__searchUrl,verify=False)
         data=data.json()['data']['datas']
         for i in data:
-
-        #data=[(i['station_train_code'],i['from_station_name'],i['to_station_name'],i['start_time'],i['arrive_time'],i['lishi'],i['yw_num'],i['yz_num'],i['wz_num']) for i in data]
-        return data
+            train_no=i['train_no']
+            from_station_no=i['from_station_no']
+            to_station_no=i['to_station_no']
+            seat_types=i['seat_types']
+            train_date=i['start_train_date']
+            train_date="-".join((train_date[:4],train_date[4:6],train_date[6:]))
+            ticket_price_url=ticketPriceUrl % (train_no,from_station_no,to_station_no,seat_types,train_date)
+            ticket_price=requests.get(ticket_price_url,verify=False).json()['data']
+            yw_price=ticket_price['A3'] if ticket_price.has_key("A3") else '-'
+            yz_price=ticket_price['A1'] if ticket_price.has_key("A1") else '-'
+            wz_price=ticket_price['WZ'] if ticket_price.has_key("WZ") else '-'
+            yield i['station_train_code'],i['from_station_name'],i['to_station_name'],i['start_time'],i['arrive_time'],i['lishi'],"/".join((i['yw_num'],yw_price)),"/".join((i['yz_num'],yz_price)),"/".join((i['wz_num'],wz_price))
 
     def getStationCode(self,stationCode,filepath='.'):
         path=os.path.join(filepath,self.__stationConf)
@@ -47,7 +56,7 @@ class search(object):
             f=open(path,'r')
             data=eval(f.read())
             try:
-                #print data[stationCode]
+                print data[stationCode]
                 return data[stationCode]
             except KeyError:
                 raise Exception,"请输入正确的地点拼音"
